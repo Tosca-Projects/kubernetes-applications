@@ -1,0 +1,44 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: "deploy-alien"
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: "alien"
+    spec:
+      containers:
+      - name: "alien"
+        image: "laurentg/docker-alien4cloud"
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+# UNCOMMENT this lines if you're beyond proxy
+#        - name: JAVA_EXT_OPTIONS 
+#          value: "-Dhttp.proxyHost=my-proxy.com -Dhttp.proxyPort=8080 -Dhttps.proxyHost=my-proxy.com -Dhttps.proxyPort=8080 -Dhttp.nonProxyHosts=svc-yorc.$(NAMESPACE) -Dhttps.nonProxyHosts=svc-yorc.$(NAMESPACE)"
+        ports:
+          - name: alien
+            containerPort: 8088
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: "svc-alien"
+spec:
+  selector:
+    app: "alien"
+  ports:
+    - name: alien
+      protocol: "TCP"
+      port: 8088
+      targetPort: 8088
+    
+  type: LoadBalancer

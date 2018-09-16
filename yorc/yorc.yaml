@@ -1,0 +1,87 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: "deploy-yorc"
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: "yorc"
+    spec:
+      containers:
+      - name: "yorc-container"
+        image: "ystia/yorc:3.0.0"
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: "YORC_LOG"
+          value: "DEBUG"
+        - name: "YORC_WORKING_DIRECTORY"
+          value: "/work"
+        #consul configuration
+        - name: "SERVERS_TO_JOIN"
+          value: "sfs-consul-0.svc-consul.$(NAMESPACE).svc.cluster.local,sfs-consul-1.svc-consul.$(NAMESPACE).svc.cluster.local,sfs-consul-2.svc-consul.$(NAMESPACE).svc.cluster.local"
+        - name: "CONSUL_MODE"
+          value: "client"
+        - name: "NB_CONSUL_SERVER"
+          value: "3"
+        - name: "YORC_SERVER_ID"
+          value: "server_$(POD_NAME)"
+        ports:
+          - containerPort: 8800
+            name: api-port
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/yorc
+        - name: work-dir
+          mountPath: /work
+        lifecycle:
+          preStop:
+            exec:
+              command: ["consul", "leave"]
+      volumes:
+      - name: config-volume
+        secret:
+          secretName: yorc-conf
+      - name: work-dir
+        persistentVolumeClaim:
+          claimName: nfs
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  resources:
+    requests:
+      storage: 1Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: "svc-yorc"
+spec:
+  selector:
+    app: "yorc"
+  ports:
+    - protocol: "TCP"
+      name: yorc-api
+      port: 8800
+      targetPort: 8800
+  type: NodePort
+
+  
