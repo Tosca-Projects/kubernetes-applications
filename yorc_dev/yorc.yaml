@@ -1,0 +1,51 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: "deploy-yorc"
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: "yorc"
+    spec:
+      containers:
+      - name: "yorc-container"
+        image: "ystia/yorc:3.0.0"
+        env:
+        - name: "YORC_LOG"
+          value: "DEBUG"
+        - name: "CONSUL_ENV_ui"
+          value: "true"
+        ports:
+          - containerPort: 8800
+            name: api-port
+          - containerPort: 8500
+            name: consul-ui-port
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/yorc
+  
+      volumes:
+        - name: config-volume
+          secret:
+            secretName: yorc-conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: "svc-yorc"
+spec:
+  selector:
+    app: "yorc"
+  ports:
+    - protocol: "TCP"
+      name: yorc-api
+      port: 8800
+      targetPort: 8800
+    - protocol: "TCP"
+      name: consul-ui
+      port: 8500
+      targetPort: 8500
+  type: LoadBalancer
+  
