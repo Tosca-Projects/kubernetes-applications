@@ -27,6 +27,11 @@ spec:
         ports:
           - name: alien
             containerPort: 8088
+        readinessProbe:
+          tcpSocket:
+            port: 8088
+          initialDelaySeconds: 5
+          periodSeconds: 3
 ---
 kind: Service
 apiVersion: v1
