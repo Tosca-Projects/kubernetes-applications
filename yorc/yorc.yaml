@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
       - name: "yorc-container"
-        image: "ystia/yorc:3.0.0"
+        image: "ystia/yorc:3.0.2"
         env:
         - name: POD_IP
           valueFrom:
